@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Match the Pair Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      text-align: center;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .score {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .tries {
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .card {
+      width: 100px;
+      height: 100px;
+      background-color: #ddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 10px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s;
+    }
+
+    .card .front,
+    .card .back {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      border-radius: 10px;
+      backface-visibility: hidden;
+    }
+
+    .card .front {
+      background-color: #fff;
+      transform: rotateY(180deg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .card .front img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* Crop the image to fit */
+    }
+
+    .card .back {
+      background-color: #4CAF50;
+      background-image: url("https://www.transparenttextures.com/patterns/cardboard-flat.png");
+      transform: rotateY(0deg);
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card.matched {
+      background-color: #aaffaa;
+      cursor: default;
+    }
+
+    #reset {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+      border: none;
+      background-color: #007bff;
+      color: #fff;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    #reset:hover {
+      background-color: #0056b3;
+    }
+
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #ff0;
+      animation: confetti 2s linear infinite;
+    }
+
+    @keyframes confetti {
+      0% {
+        transform: translateY(0) rotate(0deg);
+      }
+      100% {
+        transform: translateY(100vh) rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Monique poosie Game</h1>
+    <div class="score">Score: <span id="score">0</span></div>
+    <div class="tries">Tries: <span id="tries">0</span></div>
+    <div class="grid" id="grid"></div>
+    <button id="reset">Reset Game</button>
+  </div>
+
+  <div id="confetti-container" class="confetti"></div>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const scoreElement = document.getElementById("score");
+    const triesElement = document.getElementById("tries");
+    const resetButton = document.getElementById("reset");
+    const confettiContainer = document.getElementById("confetti-container");
+
+    let cards = [];
+    let flippedCards = [];
+    let score = 0;
+    let tries = 0;
+    let level = 1;
+
+    // Image paths (replace with your actual image paths)
+    const images = [
+      "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg"
+    ];
+
+    // Duplicate images to create pairs
+    function generateImages() {
+      return [...images, ...images];
+    }
+
+    // Shuffle the images
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // Initialize the game
+    function initGame() {
+      const currentImages = generateImages();
+      shuffle(currentImages);
+      grid.innerHTML = "";
+      flippedCards = [];
+      score = 0;
+      tries = 0;
+      scoreElement.textContent = score;
+      triesElement.textContent = tries;
+      grid.style.gridTemplateColumns = `repeat(4, 100px)`; // 4x4 grid for 16 cards
+      cards = currentImages.map((image, index) => {
+        const card = document.createElement("div");
+        card.classList.add("card");
+
+        const front = document.createElement("div");
+        front.classList.add("front");
+
+        const img = document.createElement("img");
+        img.src = image;
+        img.alt = `Image ${index + 1}`;
+        front.appendChild(img);
+
+        const back = document.createElement("div");
+        back.classList.add("back");
+
+        card.appendChild(front);
+        card.appendChild(back);
+        card.addEventListener("click", flipCard);
+        return card;
+      });
+      cards.forEach(card => grid.appendChild(card));
+    }
+
+    // Flip a card
+    function flipCard() {
+      if (flippedCards.length < 2 && !this.classList.contains("flipped")) {
+        this.classList.add("flipped");
+        flippedCards.push(this);
+
+        if (flippedCards.length === 2) {
+          tries++;
+          triesElement.textContent = tries;
+          setTimeout(checkMatch, 500);
+        }
+      }
+    }
+
+    // Check if the flipped cards match
+    function checkMatch() {
+      const [card1, card2] = flippedCards;
+      if (card1.querySelector("img").src === card2.querySelector("img").src) {
+        card1.classList.add("matched");
+        card2.classList.add("matched");
+        score += 10;
+      } else {
+        setTimeout(() => {
+          card1.classList.remove("flipped");
+          card2.classList.remove("flipped");
+        }, 500);
+        score = Math.max(0, score - 5);
+      }
+      scoreElement.textContent = score;
+      flippedCards = [];
+
+      // Check if all cards are matched
+      if (document.querySelectorAll(".matched").length === cards.length) {
+        celebrate();
+        setTimeout(() => {
+          level++;
+          initGame();
+        }, 3000);
+      }
+    }
+
+    // Victory animation
+    function celebrate() {
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement("div");
+        confetti.classList.add("confetti-piece");
+        confetti.style.left = `${Math.random() * 100}vw`;
+        confetti.style.animationDelay = `${Math.random() * 2}s`;
+        confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        confettiContainer.appendChild(confetti);
+      }
+      setTimeout(() => {
+        confettiContainer.innerHTML = "";
+      }, 3000);
+    }
+
+    // Reset the game
+    resetButton.addEventListener("click", () => {
+      level = 1;
+      initGame();
+    });
+
+    // Start the game
+    initGame();
+  </script>
+</body>
+</html>
